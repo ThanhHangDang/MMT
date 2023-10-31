@@ -28,6 +28,7 @@ def isLogin(user, password):
     json_data = json.dumps(data)
     print(json_data)
     CLIENTSOCKET.send(json_data.encode())
+    loginResponse()
 
 def loginResponse():
     res = CLIENTSOCKET.recv(1024).decode()
@@ -36,7 +37,7 @@ def loginResponse():
         chooseLayout()
     else:
         CLIENTSOCKET.close()
-        receiveUpLoadResponseFromServer("Login failed. Please try again.")
+        print("Login failed. Please try again.")
 
     
 

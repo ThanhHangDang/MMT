@@ -75,13 +75,18 @@ def _handle(conn, addr):
             file.close()                    
 
         elif data_dict['method'] == 'login':
+            print(data_dict)
             with open('login.json', 'r') as file:
                 user = json.load(file)
+                foundUser = False
                 for item in user:
+                    print(item['username'])
                     if item['username'] == data_dict['username'] and item['password'] == data_dict['password']:
                         res = 'OK'
-                    else:
-                        res = 'Not user'
+                        foundUser = True
+                
+                if not foundUser:
+                    res = 'Not user'
             file.close()
 
         else:
