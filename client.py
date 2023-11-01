@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import *
 from tkinter import filedialog
 import json
+import subprocess
 
 HOST = "127.0.0.1"
 PORT = 8080
@@ -119,14 +120,31 @@ def sendFilenameToServerToFind(filename):
     CLIENTSOCKET.send(json_data.encode())
     receiveAddressFromServer()
 
+def ping(host):
+    # Gọi lệnh ping từ hệ điều hành Windows
+    result = subprocess.run(['ping', '-n', '4', host], capture_output=True, text=True)
+    
+    # Kiểm tra kết quả trả về
+    if result.returncode == 0:
+        # Lấy thông tin về độ trễ từ output
+        lines = result.stdout.strip().split('\n')
+        time_line = lines[-1]  # Dòng cuối cùng chứa thông tin về độ trễ
+        time = time_line.split('=')[1].split()[0]  # Lấy giá trị độ trễ
+        # Loại bỏ ký tự ',' và 'ms'
+        time = time.replace(',', '').replace('ms', '')
+
+        return float(time)
+    else:
+        return 9999999999
+
 # Nhận respon
 def receiveAddressFromServer():
-    address = CLIENTSOCKET.recv(1024).decode()
-    if address != "False":
-        print("File found at: ", address)
-        # Thực hiện p2p với client(address) chứa file
-    else:
+    res = CLIENTSOCKET.recv(1024).decode()
+    if res == "NoFile":
         print("Cannot find a client having this file")
+    else:
+        # Thực hiện p2p với client(address) chứa file
+        print(res)
 
 # Gửi data để cập nhật, sửa
 def sendInformationOfFileToServerToSaveToDatabase(filename, path):

@@ -46,10 +46,15 @@ def _handle(conn, addr):
             with open('database.json', 'r') as file:
                 database =json.load(file)
                 res = []
+                found = False
                 for item in database:
                     if item['filename'] == data_dict['filename']:
                         res.append(item)
+                        found = True
             file.close()
+
+            if not found:
+                res = "NoFile"
 
         elif data_dict['method'] == 'upload':
             with open('database.json', 'r') as file:
