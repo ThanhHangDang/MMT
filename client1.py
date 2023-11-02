@@ -10,12 +10,13 @@ HOST = "127.0.0.1"
 PORT = 8080
 
 PEER_HOST = socket.gethostbyname(socket.gethostname())
-PEER_PORT = 8080
+PEER_PORT = 8081
 
 # Define a global variable to hold the main window
 main_window = None
 
 CLIENTSOCKET = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+p2p_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 # Hàm cho phép client kết nối với server và các client khác
 def start_client_threads():
@@ -150,8 +151,8 @@ def start_server_connection():
         ping_thread = threading.Thread(target=do_ping)
         ping_thread.start()
 
-        # Chờ tối đa 10 giây
-        ping_thread.join(timeout=5)
+        # Chờ tối đa 2 giây
+        ping_thread.join(timeout=2)
 
         if result and result.returncode == 0:
             # Lấy thông tin về độ trễ từ output
@@ -173,18 +174,35 @@ def start_server_connection():
         else:
             # Thực hiện p2p với client(address) chứa file
             res = json.loads(data)
-            print(res[0]['ipaddress'][0])
+            print("Finding Nearest Peer...")
             for item in res:
                 ping_result = ping(item['ipaddress'][0])
                 item['ping'] = ping_result
             res.sort(key=lambda x: x['ping'])
-            print(res[0]['ipaddress'])
+            print("Done!!!")
             host_peer = res[0]['ipaddress']
-            # port_peer = res[0]['ipaddress']
-            # CLIENTSOCKET.close()
-            # p2p_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            CLIENTSOCKET.connect((host_peer))
+            port_peer = res[0]['port']
+            data_download = {
+                'method' : 'download',
+                'path' : res[0]['path']
+            }
+            json_data_download = json.dumps(data_download)
+            CLIENTSOCKET.close()
+            #tạo 1 socket mới để kết nối
+            p2p_socket2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            p2p_socket2.connect((host_peer, port_peer))
+            p2p_socket2.sendall(json_data_download.encode())
 
+            with open(res[0]['path'].split('/')[-1], 'wb') as file1:
+                while True:
+                    data = p2p_socket2.recv(1024)
+                    if not data:
+                        break
+                    file1.write(data)
+
+            p2p_socket2.close()
+            global main_window
+            main_window.destroy()
 
     # Gửi data để cập nhật, sửa
     def sendInformationOfFileToServerToSaveToDatabase(filename, path):
@@ -192,7 +210,8 @@ def start_server_connection():
             'filename' : filename,
             'path' : path,
             'method' : 'upload',
-            'ipaddress' : socket.gethostbyname(socket.gethostname()),
+            'ipaddress' : PEER_HOST,
+            'port': PEER_PORT,
         }
         json_data = json.dumps(data)
         CLIENTSOCKET.send(json_data.encode())
@@ -242,7 +261,6 @@ def start_server_connection():
     login_window.mainloop()
 
 def start_client_connections():
-    p2p_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     p2p_socket.bind((PEER_HOST, PEER_PORT))  # PORT_P2P là cổng P2P mà bạn sử dụng
     p2p_socket.listen(10)
     print('Server started. Listening on', PEER_HOST, ':', PEER_PORT)
@@ -256,8 +274,22 @@ def start_client_connections():
         client_thread.start()
 
 def handle_client(conn, addr):
-    pass
+    while True:
+        data = conn.recv(1024).decode()
+        if not data: break
 
+        json_data = json.loads(data)
+
+        if json_data['method'] == 'download':
+            with open(json_data['path'], 'rb') as file:
+                data_res = file.read(1024)
+                while data_res:
+                    p2p_socket.send(data_res)
+                    data_res = file.read(1024)
+                    if not data_res: break
+            file.close()
+            p2p_socket.close()
+            
 # Hàm main để bắt đầu chương trình
 def main():
     start_client_threads()

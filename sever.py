@@ -61,7 +61,7 @@ def _handle(conn, addr):
                 database = json.load(file)
                 found = False
                 for item in database:
-                    if item['filename'] == data_dict['filename'] and item['ipaddress'] == data_dict['ipaddress']:
+                    if item['filename'] == data_dict['filename'] and item['ipaddress'] == data_dict['ipaddress'] and item['port'] == data_dict['port']:
                         item['path'] = data_dict['path']
                         found = True
                         res = 'Database is updated Successfull!!!'
@@ -70,7 +70,8 @@ def _handle(conn, addr):
                     new_item = {
                         "filename" : data_dict['filename'],
                         "ipaddress" : data_dict['ipaddress'],
-                        'path' : data_dict['path']
+                        'path' : data_dict['path'],
+                        'port' : data_dict['port']
                     }
                     database.append(new_item)
                     res = 'Database is added Successfull!!!'
